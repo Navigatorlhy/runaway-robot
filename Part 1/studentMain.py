@@ -116,78 +116,13 @@ def estimate_next_pos(measurement, OTHER = None):
     return xy_estimate, OTHER
 
 
-# u = matrix([[0.], [0.], [0.]])  # external motion
-F = matrix([[1., 1., 0.],
-            [0., 1., 0.],
-            [0., 0., 1.]])      # next state function
-H = matrix([[1., 0., 0.],
-            [0., 0., 1.]])      # measurement function
-R = matrix([[0.05, 0.],
-            [0., 0.05]])          # measurement uncertainty
-I = matrix([[1., 0., 0.],
-            [0., 1., 0.],
-            [0., 0., 1.]])      # identity matrix
-
-
-def predicate_kalman(measurement, OTHER=None):
-    if not OTHER:
-        x = matrix([[0.],
-                    [0.],
-                    [0.]])  # initial state (location and velocity)
-        P = matrix([[100., 0., 0.],
-                    [0., 100., 0.],
-                    [0., 0., 1000.]])  # initial uncertainty
-        OTHER = [[], x, P]
-    OTHER[0].append(measurement)
-    # calculate heading and distance from previous data
-    if len(OTHER[0]) == 1:
-        m_heading = 0
-        m_distance = 0
-    else:
-        p1 = (OTHER[0][-1][0], OTHER[0][-1][1])
-        p2 = (OTHER[0][-2][0], OTHER[0][-2][1])
-        m_distance = distance_between(p1, p2)
-        dx = p1[0] - p2[0]
-        dy = p1[1] - p2[1]
-        m_heading = atan2(dy, dx) % (2 * pi)
-        OTHER[0].pop(0)
-
-    x = OTHER[1]
-    P = OTHER[2]
-    pre_heading = x.value[0][0]
-    for d in [-1, 0, 1]:
-        diff = (int(pre_heading / (2 * pi)) + d) * (2 * pi)
-        if abs(m_heading + diff - pre_heading) < pi:
-            m_heading += diff
-            break
-    # measurement update
-    y = matrix([[m_heading],
-                [m_distance]]) - H * x
-    S = H * P * H.transpose() + R
-    K = P * H.transpose() * S.inverse()
-    x = x + (K * y)
-    P = (I - K * H) * P
-    # prediction
-    x = F * x
-    P = F * P * F.transpose()
-
-    OTHER[1] = x
-    OTHER[2] = P
-
-    est_heading = x.value[0][0]
-    est_distance = x.value[2][0]
-    est_x = measurement[0] + est_distance * cos(est_heading)
-    est_y = measurement[1] + est_distance * sin(est_heading)
-
-    return (est_x, est_y), OTHER
-
-
 # A helper function you may find useful.
 def distance_between(point1, point2):
     """Computes distance between point1 and point2. Points are (x, y) pairs."""
     x1, y1 = point1
     x2, y2 = point2
     return sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
 
 # This is here to give you a sense for how we will be running and grading
 # your code. Note that the OTHER variable allows you to store any
@@ -205,11 +140,6 @@ def demo_grading(estimate_next_pos_fcn, target_bot, OTHER = None):
         position_guess, OTHER = estimate_next_pos_fcn(measurement, OTHER)
         target_bot.move_in_circle()
         true_position = (target_bot.x, target_bot.y)
-
-        x = OTHER[1]
-        print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
-            (target_bot.heading, target_bot.turning, target_bot.distance), \
-            position_guess, true_position
 
         # print position_guess, true_position
         error = distance_between(position_guess, true_position)
@@ -252,24 +182,19 @@ def demo_grading_visualize(estimate_next_pos_fcn, target_bot, OTHER=None):
     broken_robot.penup()
     measured_broken_robot.penup()
     # End of Visualization
-    while not localized and ctr <= 1000:
+    while not localized and ctr <= 10:
         ctr += 1
         measurement = target_bot.sense()
         position_guess, OTHER = estimate_next_pos_fcn(measurement, OTHER)
         target_bot.move_in_circle()
         true_position = (target_bot.x, target_bot.y)
 
-        x = OTHER[1]
-        print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
-            (target_bot.heading, target_bot.turning, target_bot.distance), \
-            position_guess, true_position
-
         error = distance_between(position_guess, true_position)
         if error <= distance_tolerance:
             print "You got it right! It took you ", ctr, " steps to localize."
             localized = True
-        #if ctr == 1000:
-        #    print "Sorry, it took you too many steps to localize the target."
+        if ctr == 10:
+            print "Sorry, it took you too many steps to localize the target."
         # More Visualization
         measured_broken_robot.setheading(target_bot.heading * 180 / pi)
         measured_broken_robot.goto(measurement[0] * size_multiplier, measurement[1] * size_multiplier - 200)
@@ -299,5 +224,4 @@ def naive_next_pos(measurement, OTHER = None):
 test_target = robot(0, 20, 2.8, 2*pi / 34.0, 3)
 test_target.set_noise(0.0, 0.0, 0.0)
 
-#demo_grading_visualize(predicate_kalman, test_target)
-demo_grading(predicate_kalman, test_target)
+demo_grading(estimate_next_pos, test_target)

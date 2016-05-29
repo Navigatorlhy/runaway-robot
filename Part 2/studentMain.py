@@ -38,7 +38,9 @@ import copy
 # next position. The OTHER variable that your function returns will be
 # passed back to your function the next time it is called. You can use
 # this to keep track of important information over time.
-def estimate_next_pos(measurement, OTHER=None):
+
+
+def predicate_mean(measurement, OTHER=None):
     """Estimate the next (x, y) position of the wandering Traxbot
     based on noisy (x, y) measurements."""
     if not OTHER:
@@ -106,7 +108,7 @@ def Gaussian(mu, sigma, x):
     return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * pi * (sigma ** 2))
 
 
-def particle_filter(measurement, OTHER=None):
+def predicate_particle(measurement, OTHER=None):
 
     if not OTHER:
         OTHER = []
@@ -177,8 +179,8 @@ F = matrix([[1., 1., 0.],
             [0., 0., 1.]])      # next state function
 H = matrix([[1., 0., 0.],
             [0., 0., 1.]])      # measurement function
-R = matrix([[0.1, 0.],
-            [0., 0.1]])          # measurement uncertainty
+R = matrix([[0.075, 0.],
+            [0., 0.075]])          # measurement uncertainty
 I = matrix([[1., 0., 0.],
             [0., 1., 0.],
             [0., 0., 1.]])      # identity matrix
@@ -262,10 +264,10 @@ def demo_grading(estimate_next_pos_fcn, target_bot, OTHER=None):
         target_bot.move_in_circle()
         true_position = (target_bot.x, target_bot.y)
 
-        x = OTHER[1]
-        print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
-            (target_bot.heading, target_bot.turning, target_bot.distance), \
-            position_guess, true_position
+        # x = OTHER[1]
+        # print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
+        #     (target_bot.heading, target_bot.turning, target_bot.distance), \
+        #     position_guess, true_position
 
         error = distance_between(position_guess, true_position)
         if error <= distance_tolerance:
@@ -314,10 +316,10 @@ def demo_grading_visualize(estimate_next_pos_fcn, target_bot, OTHER=None):
         target_bot.move_in_circle()
         true_position = (target_bot.x, target_bot.y)
 
-        x = OTHER[1]
-        print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
-            (target_bot.heading, target_bot.turning, target_bot.distance), \
-            position_guess, true_position
+        # x = OTHER[1]
+        # print (angle_trunc(x.value[0][0]), x.value[1][0], x.value[2][0]), \
+        #     (target_bot.heading, target_bot.turning, target_bot.distance), \
+        #     position_guess, true_position
 
         error = distance_between(position_guess, true_position)
         if error <= distance_tolerance:
@@ -353,8 +355,8 @@ def naive_next_pos(measurement, OTHER=None):
 # This is how we create a target bot. Check the robot.py file to understand
 # How the robot class behaves.
 test_target = robot(0.0, 10.0, 0.0, 2*pi / 30, 1.5)
-measurement_noise = 0.5 * test_target.distance
+measurement_noise = 0.05 * test_target.distance
 test_target.set_noise(0.0, 0.0, measurement_noise)
 
-demo_grading_visualize(predicate_kalman, test_target)
-# demo_grading(predicate_kalman, test_target)
+# demo_grading_visualize(predicate_kalman, test_target)
+demo_grading(predicate_kalman, test_target)

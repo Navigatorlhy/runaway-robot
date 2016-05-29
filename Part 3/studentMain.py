@@ -39,7 +39,7 @@ from matrix import *
 import random
 
 
-def estimate_next_pos(measurement, OTHER = None):
+def predicate_mean(measurement, OTHER = None):
     """Estimate the next (x, y) position of the wandering Traxbot
     based on noisy (x, y) measurements."""
     if not OTHER:
@@ -100,7 +100,6 @@ def estimate_next_pos(measurement, OTHER = None):
     # You must return xy_estimate (x, y), and OTHER (even if it is None)
     # in this order for grading purposes.
     return xy_estimate, OTHER
-
 
 
 # u = matrix([[0.], [0.], [0.]])  # external motion
@@ -200,7 +199,7 @@ def demo_grading(hunter_bot, target_bot, next_move_fcn, OTHER=None):
     """Returns True if your next_move_fcn successfully guides the hunter_bot
     to the target_bot. This function is here to help you understand how we
     will grade your submission."""
-    max_distance = 0.98 * target_bot.distance  # 1.94 is an example. It will change.
+    max_distance = 1.98 * target_bot.distance  # 1.94 is an example. It will change.
     separation_tolerance = 0.02 * target_bot.distance  # hunter must be within 0.02 step size to catch target
     caught = False
     ctr = 0
@@ -318,6 +317,7 @@ def demo_grading_visualize(hunter_bot, target_bot, next_move_fcn, OTHER = None):
             print "It took too many steps to catch the target."
     return caught
 
+
 def angle_trunc(a):
     """This maps all angles to a domain of [-pi, pi]"""
     while a < 0.0:
@@ -362,4 +362,4 @@ target.set_noise(0.0, 0.0, measurement_noise)
 
 hunter = robot(-10.0, -10.0, 0.0)
 
-print demo_grading_visualize(hunter, target, next_move)
+demo_grading(hunter, target, next_move)

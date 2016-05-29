@@ -92,8 +92,8 @@ F = matrix([[1., 1., 0.],
             [0., 0., 1.]])      # next state function
 H = matrix([[1., 0., 0.],
             [0., 0., 1.]])      # measurement function
-R = matrix([[sigma * 1.5, 0.],
-            [0., sigma * 1.5]])          # measurement uncertainty
+R = matrix([[sigma , 0.],
+            [0., sigma]])          # measurement uncertainty
 I = matrix([[1., 0., 0.],
             [0., 1., 0.],
             [0., 0., 1.]])      # identity matrix

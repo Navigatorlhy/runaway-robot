@@ -21,9 +21,10 @@ from matrix import *
 import random
 
 
-sigma = 0.2
+sigma = 0.05
 
-def estimate_next_pos(measurement, OTHER = None):
+
+def predicate_mean(measurement, OTHER = None):
     """Estimate the next (x, y) position of the wandering Traxbot
     based on noisy (x, y) measurements."""
     clockwise = None
@@ -93,8 +94,8 @@ F = matrix([[1., 1., 0.],
             [0., 0., 1.]])      # next state function
 H = matrix([[1., 0., 0.],
             [0., 0., 1.]])      # measurement function
-R = matrix([[sigma * 1.5, 0.],
-            [0., sigma * 1.5]])          # measurement uncertainty
+R = matrix([[sigma, 0.],
+            [0., sigma]])          # measurement uncertainty
 I = matrix([[1., 0., 0.],
             [0., 1., 0.],
             [0., 0., 1.]])      # identity matrix
@@ -185,6 +186,7 @@ def next_position_in_circle(x, y, heading, distance):
     est_y = y + distance * sin(heading)
     return est_x, est_y
 
+
 def distance_between(point1, point2):
     """Computes distance between point1 and point2. Points are (x, y) pairs."""
     x1, y1 = point1
@@ -196,7 +198,7 @@ def demo_grading(hunter_bot, target_bot, next_move_fcn, OTHER=None):
     """Returns True if your next_move_fcn successfully guides the hunter_bot
     to the target_bot. This function is here to help you understand how we
     will grade your submission."""
-    max_distance = 0.98 * target_bot.distance  # 0.98 is an example. It will change.
+    max_distance = 0.97 * target_bot.distance  # 0.98 is an example. It will change.
     separation_tolerance = 0.02 * target_bot.distance  # hunter must be within 0.02 step size to catch target
     caught = False
     ctr = 0
@@ -234,11 +236,12 @@ def demo_grading(hunter_bot, target_bot, next_move_fcn, OTHER=None):
             print "It took too many steps to catch the target."
     return caught
 
+
 def demo_grading_visualized(hunter_bot, target_bot, next_move_fcn, OTHER = None):
     """Returns True if your next_move_fcn successfully guides the hunter_bot
     to the target_bot. This function is here to help you understand how we
     will grade your submission."""
-    max_distance = 0.98 * target_bot.distance # 1.94 is an example. It will change.
+    max_distance = 0.97 * target_bot.distance # 1.94 is an example. It will change.
     separation_tolerance = 0.02 * target_bot.distance # hunter must be within 0.02 step size to catch target
     caught = False
     ctr = 0
