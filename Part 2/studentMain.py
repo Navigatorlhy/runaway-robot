@@ -26,11 +26,10 @@
 
 # These import steps give you access to libraries which you may (or may
 # not) want to use.
-from robot import *  # Check the robot.py tab to see how this works.
-from math import *
-from matrix import *  # Check the matrix.py tab to see how this works.
-import random
-import copy
+from common.robot import *  # Check the robot.py tab to see how this works.
+from common.predictor import *
+from common.utils import *
+
 
 # This is the function you have to write. Note that measurement is a
 # single (x, y) point. This function will have to be called multiple
@@ -38,213 +37,13 @@ import copy
 # next position. The OTHER variable that your function returns will be
 # passed back to your function the next time it is called. You can use
 # this to keep track of important information over time.
-
-
-def predicate_mean(measurement, OTHER=None):
-    """Estimate the next (x, y) position of the wandering Traxbot
-    based on noisy (x, y) measurements."""
+def next_pos(measurement, OTHER=None):
     if not OTHER:
-        OTHER = []
-    OTHER.append(measurement)
-    if len(OTHER) == 1:
-        x = OTHER[0][0]
-        y = OTHER[0][1]
-        xy_estimate = (x, y)
-    elif len(OTHER) == 2:
-        x1 = OTHER[0][0]
-        y1 = OTHER[0][1]
-        x2 = OTHER[1][0]
-        y2 = OTHER[1][1]
-        dx = x2 - x1
-        dy = y2 - y1
-        xy_estimate = (dx + x2, dy + y2)
-    else:
-        headings = []
-        dists = []
-        edges = []
-        for i in xrange(1, len(OTHER)):
-            p1 = (OTHER[i][0], OTHER[i][1])
-            p2 = (OTHER[i - 1][0], OTHER[i - 1][1])
-            dist = distance_between(p1, p2)
-            dx = p1[0] - p2[0]
-            dy = p1[1] - p2[1]
-            edges.append(dy * dx)
-            heading = atan2(dy, dx)
-            dists.append(dist)
-            headings.append(heading)
+        OTHER = [KalmanFilter(0.075), ]
+    predictor = OTHER[0]
+    est_next = predictor.predict(measurement)
 
-        # find turning wise
-        clockwise = True
-        if sum(edges) < 0:
-            clockwise = False
-
-        turnings = []
-        for i in xrange(1, len(headings)):
-            turning = headings[i] - headings[i - 1]
-            if clockwise:
-                if turning > 0:
-                    turning -= 2 * pi
-            else:
-                if turning < 0:
-                    turning += 2 * pi
-            turnings.append(turning)
-
-        est_dist = sum(dists) / len(dists)
-        est_turning = sum(turnings) / len(turnings)
-        est_heading = angle_trunc(headings[-1] + est_turning)
-        x = OTHER[-1][0]
-        y = OTHER[-1][1]
-        est_x = x + est_dist * cos(est_heading)
-        est_y = y + est_dist * sin(est_heading)
-        xy_estimate = (est_x, est_y)
-
-    # You must return xy_estimate (x, y), and OTHER (even if it is None)
-    # in this order for grading purposes.
-    return xy_estimate, OTHER
-
-
-def Gaussian(mu, sigma, x):
-    # calculates the probability of x for 1-dim Gaussian with mean mu and var. sigma
-    return exp(- ((mu - x) ** 2) / (sigma ** 2) / 2.0) / sqrt(2.0 * pi * (sigma ** 2))
-
-
-def predicate_particle(measurement, OTHER=None):
-
-    if not OTHER:
-        OTHER = []
-        N = 1000
-        for i in range(N):
-            r = robot(measurement[0], measurement[1],
-                      0, random.random() * 2 * pi - pi,
-                      random.random() * 2)
-            OTHER.append(r)
-
-    p = OTHER
-    N = len(p)
-    Z = measurement
-
-    w = []
-    for i in range(N):
-        w.append(1000 - distance_between(p[i].sense(), Z))
-
-    p3 = []
-    index = int(random.random() * N)
-    beta = 0.0
-    mw = max(w)
-    for i in range(N):
-        beta += random.random() * 2.0 * mw
-        while beta > w[index]:
-            beta -= w[index]
-            index = (index + 1) % N
-        r = copy.copy(p[index])
-        r.x = measurement[0]
-        r.y = measurement[1]
-        p3.append(r)
-    p = p3
-    # p2 = []
-    # tolerance = 0.01
-    # while True:
-    #     for i in xrange(N):
-    #         if distance_between(p[i].sense(), Z) < tolerance:
-    #             p2.append(p[i])
-    #     if len(p2) > 0:
-    #         break
-    #     tolerance += 0.1
-    #
-    # p3 = []
-    # for i in xrange(N):
-    #     r = copy.copy(p2[i % len(p2)])
-    #     r.x = measurement[0]
-    #     r.y = measurement[1]
-    #     r.turning += random.random() * tolerance - tolerance
-    #     r.distance += random.random() * tolerance - tolerance
-    #     p3.append(r)
-    # p = p3
-
-    sum_x = 0.0
-    sum_y = 0.0
-    for i in range(N):
-        p[i].move_in_circle()
-        sum_x += p[i].x
-        sum_y += p[i].y
-
-    est_pos = (sum_x / len(p), sum_y / len(p))
-    OTHER = p
-    return est_pos, OTHER
-
-
-# u = matrix([[0.], [0.], [0.]])  # external motion
-F = matrix([[1., 1., 0.],
-            [0., 1., 0.],
-            [0., 0., 1.]])      # next state function
-H = matrix([[1., 0., 0.],
-            [0., 0., 1.]])      # measurement function
-R = matrix([[0.075, 0.],
-            [0., 0.075]])          # measurement uncertainty
-I = matrix([[1., 0., 0.],
-            [0., 1., 0.],
-            [0., 0., 1.]])      # identity matrix
-
-
-def predicate_kalman(measurement, OTHER=None):
-    if not OTHER:
-        x = matrix([[0.],
-                    [0.],
-                    [0.]])  # initial state (location and velocity)
-        P = matrix([[1000., 0., 0.],
-                    [0., 1000., 0.],
-                    [0., 0., 1000.]])  # initial uncertainty
-        OTHER = [[], x, P]
-    OTHER[0].append(measurement)
-    # calculate heading and distance from previous data
-    if len(OTHER[0]) == 1:
-        m_heading = 0
-        m_distance = 0
-    else:
-        p1 = (OTHER[0][-1][0], OTHER[0][-1][1])
-        p2 = (OTHER[0][-2][0], OTHER[0][-2][1])
-        m_distance = distance_between(p1, p2)
-        dx = p1[0] - p2[0]
-        dy = p1[1] - p2[1]
-        m_heading = atan2(dy, dx) % (2 * pi)
-        OTHER[0].pop(0)
-
-    x = OTHER[1]
-    P = OTHER[2]
-    pre_heading = x.value[0][0]
-    for d in [-1, 0, 1]:
-        diff = (int(pre_heading / (2 * pi)) + d) * (2 * pi)
-        if abs(m_heading + diff - pre_heading) < pi:
-            m_heading += diff
-            break
-    # measurement update
-    y = matrix([[m_heading],
-                [m_distance]]) - H * x
-    S = H * P * H.transpose() + R
-    K = P * H.transpose() * S.inverse()
-    x = x + (K * y)
-    P = (I - K * H) * P
-    # prediction
-    x = F * x
-    P = F * P * F.transpose()
-
-    OTHER[1] = x
-    OTHER[2] = P
-
-    est_heading = x.value[0][0]
-    est_distance = x.value[2][0]
-    est_x = measurement[0] + est_distance * cos(est_heading)
-    est_y = measurement[1] + est_distance * sin(est_heading)
-
-    return (est_x, est_y), OTHER
-
-
-# A helper function you may find useful.
-def distance_between(point1, point2):
-    """Computes distance between point1 and point2. Points are (x, y) pairs."""
-    x1, y1 = point1
-    x2, y2 = point2
-    return sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    return est_next, OTHER
 
 
 # This is here to give you a sense for how we will be running and grading
@@ -358,5 +157,5 @@ test_target = robot(0.0, 10.0, 0.0, 2*pi / 30, 1.5)
 measurement_noise = 0.05 * test_target.distance
 test_target.set_noise(0.0, 0.0, measurement_noise)
 
-# demo_grading_visualize(predicate_kalman, test_target)
-demo_grading(predicate_kalman, test_target)
+# demo_grading_visualize(next_pos, test_target)
+demo_grading(next_pos, test_target)
