@@ -39,7 +39,7 @@ from common.utils import *
 # this to keep track of important information over time.
 def next_pos(measurement, OTHER=None):
     if not OTHER:
-        OTHER = [KalmanFilter(0.075), ]
+        OTHER = [ExtendedKalmanFilter(1),]
     predictor = OTHER[0]
     est_next = predictor.predict(measurement)
 
@@ -154,7 +154,7 @@ def naive_next_pos(measurement, OTHER=None):
 # This is how we create a target bot. Check the robot.py file to understand
 # How the robot class behaves.
 test_target = robot(0.0, 10.0, 0.0, 2*pi / 30, 1.5)
-measurement_noise = 0.05 * test_target.distance
+measurement_noise = 0.5 * test_target.distance
 test_target.set_noise(0.0, 0.0, measurement_noise)
 
 # demo_grading_visualize(next_pos, test_target)

@@ -66,6 +66,88 @@ class KalmanFilter:
         return est_next
 
 
+class ExtendedKalmanFilter:
+    # u = matrix([[0.], [0.], [0.]])  # external motion
+    def __init__(self, sigma):
+        # State matrix
+        self.x = matrix([[0.],      # x
+                         [0.],      # y
+                         [0.],      # heading
+                         [0.],      # turning
+                         [0.]])     # distance
+        # Covariance matrix
+        self.P = matrix([[1000., 0., 0., 0., 0.],
+                         [0., 1000., 0., 0., 0.],
+                         [0., 0., 1000., 0., 0.],
+                         [0., 0., 0., 1000., 0.],
+                         [0., 0., 0., 0., 1000.]])
+        # measurement uncertainty
+        self.R = matrix([[sigma, 0.],
+                         [0., sigma]])
+
+        # transition matrix
+        self.F = ExtendedKalmanFilter.transitionMatrix(self.x)
+
+        # measurement function
+        self.H = matrix([[1., 0., 0., 0., 0.],
+                         [0., 1., 0., 0., 0.]])
+        # identity matrix
+        self.I = matrix([[1., 0., 0., 0., 0.],
+                         [0., 1., 0., 0., 0.],
+                         [0., 0., 1., 0., 0.],
+                         [0., 0., 0., 1., 0.],
+                         [0., 0., 0., 0., 1.]])
+        self.keep = []
+
+    def predict(self, measurement):
+        z = matrix([[measurement[0]],
+                    [measurement[1]]])
+        # Measurement update
+        y = z - self.H * self.x
+        S = self.H * self.P * self.H.transpose() + self.R
+        K = self.P * self.H.transpose() * S.inverse()
+        self.x = self.x + (K * y)
+        self.P = (self.I - K * self.H) * self.P
+
+        # Predication update
+        self.F = ExtendedKalmanFilter.transitionMatrix(self.x)
+        self.x = ExtendedKalmanFilter.transitionFunc(self.x)
+        self.P = self.F * self.P * self.F.transpose()
+
+        est_x = self.x.value[0][0]
+        est_y = self.x.value[1][0]
+
+        return est_x, est_y
+
+    @staticmethod
+    def transitionMatrix(state):
+        h = state.value[2][0]
+        r = state.value[3][0]
+        d = state.value[4][0]
+        return matrix([[1., 0., -d*sin(h+r), -d*sin(h+r), cos(h+r)],
+                       [0., 1.,  d*cos(h+r),  d*cos(h+r), sin(h+r)],
+                       [0., 0.,          1.,          1.,       0.],
+                       [0., 0.,          0.,          1.,       0.],
+                       [0., 0.,          0.,          0.,       1.]])
+
+    @staticmethod
+    def transitionFunc(state):
+        x = state.value[0][0]
+        y = state.value[1][0]
+        h = state.value[2][0]
+        r = state.value[3][0]
+        d = state.value[4][0]
+
+        x += d * cos(h + r)
+        y += d * sin(h + r)
+        h += r
+
+        return matrix([[x],
+                       [y],
+                       [h],
+                       [r],
+                       [d]])
+
 def predicate_mean(measurement, OTHER=None):
     """Estimate the next (x, y) position of the wandering Traxbot
     based on noisy (x, y) measurements."""
