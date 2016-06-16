@@ -15,11 +15,9 @@
 #
 # Same as part 3. Again, try to catch the target in as few steps as possible.
 
-from robot import *
-from math import *
-from matrix import *
-import random
-
+from common.robot import *
+from common.matrix import *
+from common.predictor import *
 
 sigma = 0.05
 
@@ -153,12 +151,21 @@ def predicate_kalman(measurement, OTHER=None):
     return est_next, OTHER
 
 
+def next_pos(measurement, OTHER=None):
+    if not OTHER:
+        OTHER = [KalmanFilter(0.05),]
+    predictor = OTHER[0]
+    est_next = predictor.predict(measurement)
+
+    return est_next, OTHER
+
+
 def next_move(hunter_position, hunter_heading, target_measurement, max_distance, OTHER=None):
     # This function will be called after each time the target moves.
-    est_target_pos, OTHER = predicate_kalman(target_measurement, OTHER)
+    est_target_pos, OTHER = next_pos(target_measurement, OTHER)
     est_distance = distance_between(hunter_position, est_target_pos)
     steps = 1
-    x = OTHER[1]
+    x = OTHER[0].x
     while est_distance > steps * max_distance:
         x = F * x
         est_target_pos = next_position_in_circle(est_target_pos[0], est_target_pos[1],
@@ -362,7 +369,7 @@ target.set_noise(0.0, 0.0, measurement_noise)
 
 hunter = robot(-10.0, -10.0, 0.0)
 
-#demo_grading_visualized(hunter, target, next_move)
+# demo_grading_visualized(hunter, target, next_move)
 demo_grading(hunter, target, next_move)
 
 
